@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cruncher Gadget</title>
+
+    <link rel="stylesheet" href="gadget_cruncher.css" />
+
+    <script src="lib/papaparse.js"></script>
+    <script src="lib/rsvp.latest.js"></script>
+    <script src="lib/renderjs.latest.js"></script>
+    <script src="lib/jio.latest.js"></script>
+    <script src="gadget_global.js"></script>
+    <script src="gadget_cruncher.js"></script>
+
+    <!-- configuration form option -->
+    <script id="configuration_form_option" type="text/x-supplant">
+      <option value="{value}" {selected}>{name} ({value})</option>
+    </script>
+
+    <!-- commune list template -->
+    <script id="commune_list" type="text/x-supplant">
+      <div class="list_element">
+        <h3>{character}</h3>
+        <ul class="commune_list">{commune_list}</ul>
+    </div>
+    </script>
+
+    <!-- commune link list template -->
+    <script id="commune_entry" type="text/x-supplant">
+      <span class="list_element"><a href="#{commune_identifier}">{commune_name}</a></span>
+    </script>
+
+    <!-- commune spec -->
+    <!-- commune profile -->
+    <script id="commune_spec"  type="text/x-supplant">
+      <h2>Commune: {commune_name} ;<span class="small_font">Départément: {parent_department}; Région: {parent_region}</span></h2>
+      <p>{commune_inscrits} inscrits sur la liste electorale</p>
+      <h3>Coordonées</h3>
+      <table>
+        <tbody>
+        <tr><th>Code INSEE</th><td>{ods_codeinsee}</td></tr>
+        <tr><th>Department</th><td>{ods_nom_dep}</td></tr>
+        <tr><th>EPCI</th><td>{ods_nom_epci}</td></tr>
+        <tr><th>Région</th><td>{ods_nom_reg}</td></tr>
+        </tbody>
+      </table>
+      
+      <h3>Adresse:</h3>
+      <p>{ods_nom}<br/>{ods_addresse_ligne}<br/>{ods_adresse_codepostal}&nbsp;{ods_adresse_nomcommune}</p>
+      
+      <h3>Contact:</h3>
+      <ul>
+      <li>Site Web: {ods_coordonneesnum_url}</li>
+      <li>Email: {ods_coordonneesnum_email}</li>
+      <li>Chercher en-ligne: <a href="{google_search_url}" target="_blank">Google</a></li>
+      </ul>
+    </script>
+
+    <!-- candidate spec -->
+    <!-- commune candidate list -->
+    <script id="commune_candidate_list" type="text/x-supplant">
+      <h2>Les candidats</h2>
+      <ul>{candidate_list}</ul>
+    </script>
+
+    <!-- commune candidate list item -->
+    <script id="commune_candidate_list_item" type="text/x-supplant">
+      <li>{global_percentage}% ({global_votes} votes) {liste_name} / {nuance} (tête: {head_name}) - <a target="_blank" href="{google_search_url}">Google</a></li>
+    </script>
+
+    <!-- results -->
+    <!-- 404 -->
+    <script id="commune_not_found" type="text/x-supplant">
+      <p>Désolé, la commune {hashtag} n'a pas été trouvée. Vérifiez l'orthographe en la consultant dans la liste des communes du département</p>
+    </script>
+
+    <!-- commune result bracket header cell -->
+    <script id="commune_election_header_cell" type="text/x-supplant">
+      <th class="vertical_text">
+        <span>{list_name}</span><br/>
+        <span class="small_font">{candidate_name}</span>
+      </th>
+    </script>
+
+    <!-- commune result bracket body cell -->
+    <script id="commune_election_body_cell" type="text/x-supplant">
+      <td>{votes}</td>
+    </script>
+
+    <!-- commune template table row -->
+    <script id="commune_election_row" type="text/x-supplant">
+      <tr>
+        <td>{bureau_number}</td>
+        <td><a href="{bureau_latlng}">{bureau_title}</a></td>
+        <td class="vertical_text frame_left">{voters_registered}</td>
+        <td class="vertical_text">{voters_participating}</td>
+        <td class="vertical_text">{voters_blancs}</td>
+        <td class="vertical_text">{voters_nuls}</td>
+        <td class="vertical_text">{voters_voted}</td>
+        <td class="vertical_text">{percent_voted}</td>
+        <td class="vertical_text">{voters_abstained}</td>
+        <td class="vertical_text frame_right">{percent_abstained}</td>
+        {bureau_result_bracket}
+      </tr>
+    </script>
+
+    <!-- commune template table -->
+    <script id="commune_election_table" type="text/x-supplant">
+      <table colspan="0" rowspan="0">
+        <thead>
+          <tr>
+            <th>N⁰</th>
+            <th>Bureau</th>
+            <th>Inscrit</th>
+            <th>Votant</th>
+            <th>Blanc</th>
+            <th>Nuls</th>
+            <th>Exprimés</th>
+            <th>%</th>
+            <th>Abstentions</th>
+            <th>%</th>
+            {candidate_bracket}
+          </tr>
+        </thead>
+        <tbody>
+        {commune_result_bracket}
+        </tbody>
+      </table>
+    </script>
+
+  </head>
+  <body>
+    <div class="nav_element">
+      <span class="load_data_status">dossiers actifs:</span>
+      <span class="load_data_records"></span>
+    </div>
+    <!--div class="nav_element">
+      <form name="connect_facebook" id="connect_facebook">
+        <button type="submit" class="connect_facebook_trigger">Connecter avec facebook</button>
+      </form>  
+    </div-->
+    <div class="nav_element">
+      <form name="get_data" id="get_data">
+        <!--input type="file" name="get_dataset" id="get_dataset" /-->
+        <button type="submit" class="get_dataset_trigger">Charger les données</button>
+      </form>
+      <form name="remove_data">
+        <button type="submit" disabled="disabled" class="remove_dataset_trigger">Supprimer</button>
+      </form>
+    </div>
+    <div class="nav_element">
+      <form name="set_region_filter" id="set_region_filter">
+        <label for="select_region">Région</label>
+        <select name="select_region" id="select_region">
+          
+        </select>
+        <button type="submit" disabled="disabled" class="add_region_trigger">Sélectionner cette région</button>
+      </form>
+      <form name="remove_region_filter">
+        <button type="submit" disabled="disabled" class="delete_region_trigger">Supprimer le filtre de la région</button>
+      </form>
+    </div>
+    <div class="nav_element">
+      <form name="set_department_filter" id="set_department_filter">
+        <label for="select_department">Département</label>
+        <select name="select_department" id="select_department">
+          
+        </select>
+        <button type="submit" disabled="disabled" class="add_dept_trigger">Sélectionner ce département</button>
+      </form>
+      <form name="remove_department_filter">
+        <button type="submit" disabled="disabled" class="delete_dept_trigger">Supprimer le filtre du departement</button>
+      </form>
+    </div>
+    <div class="nav_element">
+      <form name="list_by_id" id="list_by_id">
+        <button type="submit" disabled="disabled" class="sort_id_trigger">Trier par id</button>
+      </form>
+    </div>
+    <div class="nav_element">
+      <form name="list_by_name" id="list_by_name">
+        <button type="submit" disabled="disabled" class="sort_abc_trigger">Trier par libelle</button>
+      </form>
+    </div>
+    <hr/>
+    <div class="nav_element">
+      <form name="show_previous_commune" id="display_previous_commune">
+        <button type="submit" disabled="disabled" class="list_previous_commune">Commune précédente</button>
+      </form>
+      <form name="list_communes" id="list_communes">
+        <button type="submit" disabled="disabled" class="list_communes">Retour à la liste</button>
+      </form>
+      <form name="show_next_commune" id="display_next_commune">
+        <button type="submit" disabled="disabled" class="list_next_commune">Commune suivante</button>
+      </form>
+    </div>
+
+    <div class="commune_list_container"></div>
+    
+    <!--div data-gadget-url="gadget_oauth.html"
+      data-gadget-scope="oauth"
+      data-gadget-sandbox="public">
+    </div-->
+    <div data-gadget-url="gadget_jio.html"
+      data-gadget-scope="cruncher_jio"
+      data-gadget-sandbox="public">
+    </div>
+    <div data-gadget-url="gadget_jio.html"
+      data-gadget-scope="ods_jio"
+      data-gadget-sandbox="public">
+    </div>
+    <!--div data-gadget-url="gadget_jio.html"
+      data-gadget-scope="setting_jio"
+      data-gadget-sandbox="public">
+    </div-->
+  </body>
+</html>
+
