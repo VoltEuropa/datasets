@@ -69,6 +69,8 @@
   var BLANK = "";
   var SELECTED = "selected";
   var RECORDS = " dossiers";
+  var CSV = "data:application/csv;charset=utf-8,";
+  var CONF = {"delimiter": ";"};
 
   var DOCUMENT = window.document;
   var LOCATION = window.location;
@@ -137,6 +139,59 @@
   /////////////////////////////
   // methods
   /////////////////////////////
+  function createMappingBasedOnData(my_data) {
+    var output = [];
+    var len = my_data.length;
+    var record;
+    var region_title;
+    var dict;
+    var i;
+    var obj;
+    var region_list;
+    var region;
+    var department;
+
+    function getEmptyDict(my_title) {
+      return {
+        "id": getRegionDepartmentMapping().map(function (region) {
+          if (region.title === my_title) {
+            return region.id;
+          }
+        }).filter(Boolean).join(),
+        "title": my_title,
+        "department_list": [{
+          "id": record.parent_id,
+          "title": record.parent_title
+        }]
+      };
+    }
+
+    function findRegionDict(item) {
+      if (item.title === region_title) {
+        return item;
+      }
+    }
+
+    function findDeptDict(item) {
+      return item.title === record.parent_title;
+    }
+
+    for (i = 0; i < len; i += 1) {
+      record = my_data[i];
+      region_title = getRegionFromDepartment(record.parent_title); 
+      region_list = output.filter(findRegionDict).filter(Boolean);
+      if (region_list.length === 0) {
+        region = getEmptyDict(region_title, record);
+        output.push(region);
+      } else if (!region_list[0].department_list.find(findDeptDict)) {
+        region_list[0].department_list.push({
+          "id": record.parent_id, "title": record.parent_title
+        });
+      }
+    }
+    return output;
+  }
+
   function getRegionDepartmentMapping() {
     return [{
         "id": "84",
@@ -409,6 +464,21 @@
     }).filter(Boolean);
   }
 
+  function getRelevantIdList(my_state) {
+    return getRegionDepartmentMapping().map(function (region) {
+      if (my_state.filter_region === region.id) {
+        return region.department_list.map(function (department) {
+          if (my_state.filter_department) {
+            if (my_state.filter_department === departement.id) {
+              return department.id;
+            }
+          }
+          return department.id;
+        }).filter(Boolean);
+      }  
+    }).filter(Boolean);
+  }
+
   function getGoogleSearchUrl(my_title, my_keyword) {
     return GOOGLE_URL + my_title.split(SPACE).join("+") + SPACE + my_keyword;
   }
@@ -444,6 +514,10 @@
     }
   }
 
+  // original dataset has 577 columns
+  // columns 0-3 commune info
+  // columns 4-18 bureau de vote
+  // columns 19-577 candidate, each 9 fields, so 62 candidates possible in total
   function churnThroughDataSet(my_data) {
     var i;
     var len = my_data.length;
@@ -517,7 +591,7 @@
       }
     }
 
-    // meh
+    // meh...
     for (i = 1; i < len; i += 1) {
       record = my_data[i];
       if (!current_record) {
@@ -624,10 +698,13 @@
       return total_inscrits;
     }
     if (my_key === "vote") {
-      if (my_percentage) {
-        return (candidate_votes/total_votes*100).toFixed(2);
+      if (my_candidate) {
+        if (my_percentage) {
+          return (candidate_votes/total_votes*100).toFixed(2);
+        }
+        return candidate_votes;
       }
-      return candidate_votes;
+      return total_votes;
     }
   }
 
@@ -720,6 +797,8 @@
         region_select: getElem(element, "#select_region"),
         dept_select: getElem(element, "#select_department"),
         load_btn: getElem(element, ".get_dataset_trigger"),
+        download_btn: getElem(element, ".download_current_selection_trigger"),
+        download_churned_btn: getElem(element, ".download_churned_selection_trigger"),
         load_btn_off: getElem(element, ".remove_dataset_trigger"),
         record_status: getElem(element, ".load_data_records"),
         commune_container: getElem(element, ".commune_list_container"),
@@ -892,16 +971,12 @@
           return gadget.cruncher_create(getCruncherConfig());
         })
         .push(function () {
-          return RSVP.all([
-            gadget.setParameterFormList(getRegionDepartmentMapping()),
-            gadget.ods_create(getOdsConfig(ODS_DATA_SET))
-          ]);
+          return gadget.ods_create(getOdsConfig(ODS_DATA_SET));
         });
     })
 
     .declareMethod("updateParameterFormList", function (my_element, my_type) {
       var gadget = this;
-      var data = getRegionDepartmentMapping();
       var state = gadget.state;
       var id;
       var sort;
@@ -910,24 +985,23 @@
       }
       switch (my_type) {
         case REGION:
-          return gadget.setParameterFormList(data, id, state.filter_department, undefined);
+          return gadget.setParameterFormList(id, state.filter_department);
         case DEPT:
-          return gadget.setParameterFormList(data, state.filter_region, id, undefined);
+          return gadget.setParameterFormList(state.filter_region, id);
         case TITLE:
         case ID:
-          return gadget.setParameterFormList(data, state.filter_region, state.filter_department, my_type);
+          return gadget.setParameterFormList(state.filter_region, state.filter_department, my_type);
         }
     })
 
     .declareMethod("removeParameterFormList", function (my_type) {
       var gadget = this;
-      var data = getRegionDepartmentMapping();
       var state = gadget.state;
       switch (my_type) {
         case REGION:
-          return gadget.setParameterFormList(data, undefined, undefined, undefined);
+          return gadget.setParameterFormList();
         case DEPT:
-          return gadget.setParameterFormList(data, state.filter_region, undefined, undefined);
+          return gadget.setParameterFormList(state.filter_region);
       }
     })
 
@@ -964,11 +1038,10 @@
           reduced_set.push(my_data[i]);
         }
       }
-      console.log(reduced_set)
       return reduced_set;
     })
 
-    .declareMethod("setParameterFormList", function (my_list, my_region_id, my_dept_id, my_key) {
+    .declareMethod("setParameterFormList", function (my_region_id, my_dept_id, my_key) {
       var gadget = this;
       var dict = gadget.property_dict;
       var region_list = [];
@@ -979,9 +1052,9 @@
 
       // if a region is specified, we must update departments
       if (my_region_id) {
-        data_list = getRegionDict(my_region_id, my_list);  
+        data_list = getRegionDict(my_region_id, getRegionDepartmentMapping());  
       } else {
-        data_list = my_list;
+        data_list = createMappingBasedOnData(dict.data_set || ARR);
       }
 
       if (dict.data_set) {
@@ -1045,20 +1118,28 @@
       dict.sort_abc_btn.setAttribute(DISABLED, DISABLED);
     })
 
-    .declareMethod("ingestDataSet", function (my_event) {
+    .declareMethod("ingestDataSet", function (my_event, my_download) {
       var gadget = this;
       var dict = gadget.property_dict;
-      //var target = my_event.target;
-      //var file_input = target.get_dataset;
-      //var file = file_input.files[0];
+      var target = my_event.target;
+      var file_input;
+      var file;
       var parsePapaPromise;
-      var url = LOCATION.href + dict.data_download_url;
+      //var url = LOCATION.href + dict.data_download_url;
+      
+      if (my_download) {
+        file_input = dict.target.get_dataset;
+      } else {
+        dict.target = target;
+        file_input = target.get_dataset;
+      }
+      file = file_input.files[0];
 
-      //if (!file) {
-      //  return;
-      //}
+      if (!file) {
+        return;
+      }
 
-      parsePapaPromise = function (my_url) {
+      parsePapaPromise = function (my_url, my_download_dict) {
         var resolver = function (result_dict) {
           return result_dict;
         };
@@ -1090,23 +1171,147 @@
       return new RSVP.Queue()
         .push(function () {
           dict.load_btn.setAttribute(DISABLED, DISABLED);
-          return parsePapaPromise(url);
+          return parsePapaPromise(file);
         })
         .push(function (result_dict) {
+          console.log(result_dict)
+          if (my_download) {
+            return gadget.downloadCSV(result_dict);
+          }
           dict.data_set = churnThroughDataSet(result_dict.data);
           dict.load_btn.removeAttribute(DISABLED);
           dict.load_btn_off.removeAttribute(DISABLED);
+          dict.download_btn.removeAttribute(DISABLED);
+          dict.download_churned_btn.removeAttribute("DISABLED");
           dict.region_btn.removeAttribute(DISABLED);
           dict.region_btn_off.removeAttribute(DISABLED);
           dict.dept_btn.removeAttribute(DISABLED);
           dict.dept_btn_off.removeAttribute(DISABLED);
           dict.sort_id_btn.removeAttribute(DISABLED);
           dict.sort_abc_btn.removeAttribute(DISABLED);
-          return gadget.stateChange({"record_count": dict.data_set.length});
+          return RSVP.all([
+            gadget.stateChange({"record_count": dict.data_set.length}),
+            gadget.setParameterFormList()
+          ]);
         })
         .push(null, function (err) {
           throw (err);
         });
+    })
+
+    .declareMethod("downloadCSV", function (my_result_dict) {
+      var gadget = this;
+      var dict = gadget.property_dict;
+      var state = gadget.state;
+      var output = [my_result_dict.data[0]];
+      var len = my_result_dict.data.length;
+      var i;
+      var record;
+      var parsePapaPromise;
+      var relevant_id_list;
+      var download_link;
+
+      // get the list of departments from the current selection (region or dept)
+      relevant_id_list = getRelevantIdList(state)[0].map(function (id) {
+        return parseInt(id, 10).toString();
+      });
+
+      // filter the parsed output by those departments
+      for (i = 1; i < len; i += 1) {
+        record = my_result_dict.data[i];
+        if (relevant_id_list.includes(record[0])) {
+          output.push(record); 
+        }
+      }
+
+      // and convert it back, make sure to include the BOM, else foreign
+      // characters will be mangled
+      download_link = document.createElement("a");
+      download_link.href = CSV + "\ufeff" + encode(Papa.unparse(output, CONF));
+      download_link.download = "data.csv";
+      document.body.appendChild(download_link);
+      download_link.click();
+      document.body.removeChild(download_link);
+      return;
+    })
+
+    .declareMethod("downloadPolishedCsv", function (my_event) {
+      var gadget = this;
+      var dict = gadget.property_dict;
+      var output = [];
+      var header;
+      var download_link;
+      var header_row = [
+        "Libellé de la région",
+        "Code de la région",
+        "Libellé du département",
+        "Code du département",
+        "Libellé de la commune",
+        "Code de la commune",
+        "Votants",
+        "Inscrits"
+      ];
+      var i;
+      for (i = 0; i < 61; i += 1) {
+        header_row.push(
+          "Liste",
+          "Nom",
+          "Libellé Nuance",
+          "Code de la Nuance",
+          "Votes",
+          "Pourcentage",
+          "Rechercher sur Google"
+        );
+      }
+
+      output = dict.data_set.map(function (record) {
+        var tail = [];
+        var i;
+        var data;
+        var candidate;
+        var region_title = getRegionFromDepartment(record.parent_title)
+        var base = [
+          region_title,
+          getRegionDepartmentMapping().map(function (my_region) {
+            if (my_region.title === region_title) {
+              return my_region.id;
+            }
+          }).filter(Boolean)[0],
+          record.parent_title,
+          record.parent_id,
+          record.title,
+          record.id,
+          getTotalFromRecord("vote", record, null),
+          getTotalFromRecord("inscrits", record, null)
+        ];
+        for (i = 0; i < 61; i += 1) {
+          candidate = record.candidate_list[i];
+          if (candidate) {
+            tail.push(
+              candidate.liste,
+              candidate.nom,
+              candidate.libelle_nuance,
+              candidate.nuance,
+              getTotalFromRecord("vote", record, candidate),
+              getTotalFromRecord("vote", record, candidate, true),
+              getGoogleSearchUrl(candidate.liste === BLANK ? candidate.nom : candidate.liste, record.title)
+            );
+          } else {
+            tail.push(BLANK, BLANK, BLANK, BLANK, BLANK, BLANK, BLANK);
+          }
+        }
+        data = base.concat(tail);
+        data = data.join(";");
+        return data;
+      });
+      output.unshift(header_row.join(";"));
+      download_link = document.createElement("a");
+      download_link.href = CSV + "\ufeff" + encode(output.join("\r\n"));
+      download_link.download = "data.csv";
+      document.body.appendChild(download_link);
+      download_link.click();
+      document.body.removeChild(download_link);
+      return;
     })
 
     .declareMethod("setCommune", function (my_hash) {
@@ -1230,7 +1435,6 @@
       var gadget = this;
       var state = gadget.state;
       return gadget.setParameterFormList(
-        getRegionDepartmentMapping(),
         state.filter_region,
         state.filter_department,
         state.filter_sort
@@ -1330,6 +1534,10 @@
           return this.ingestDataSet(event);
         case "remove_data":
           return this.clearDataSet(event);
+        case "download_current_selection":
+          return this.ingestDataSet(event, true);
+        case "download_churned_selection":
+          return this.downloadPolishedCsv(event);
         case "set_region_filter":
           return this.updateParameterFormList(event.target.select_region, REGION);
         case "remove_region_filter":

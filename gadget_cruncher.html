@@ -143,11 +143,21 @@
     </div-->
     <div class="nav_element">
       <form name="get_data" id="get_data">
-        <!--input type="file" name="get_dataset" id="get_dataset" /-->
+        <input type="file" name="get_dataset" id="get_dataset" />
         <button type="submit" class="get_dataset_trigger">Charger les données</button>
       </form>
       <form name="remove_data">
         <button type="submit" disabled="disabled" class="remove_dataset_trigger">Supprimer</button>
+      </form>
+    </div>
+    <div class="nav_element">
+      <form name="download_churned_selection" id="download_churned_selection">
+        <button type="submit" disabled="disabled" class="download_churned_selection_trigger">Télécharger la sélection nettoyée</button>
+      </form>
+    </div>
+    <div class="nav_element">
+      <form name="download_current_selection" id="download_current_selection">
+        <button type="submit" disabled="disabled" class="download_current_selection_trigger">Télécharger la sélection actuelle</button>
       </form>
     </div>
     <div class="nav_element">

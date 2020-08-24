@@ -8,7 +8,7 @@
   /////////////////////////////
   var OPTION_DICT = {
     //"facebook_id": "xxx",
-    "data_download_url": "fr_2020_municipal_elections_1st_round_results_by_voting_office.txt"
+    //"data_download_url": "fr_2020_municipal_elections_1st_round_results_by_voting_office.txt"
   };
 
   rJS(window)
