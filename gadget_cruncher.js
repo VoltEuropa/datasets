@@ -1,6 +1,6 @@
 /*jslint nomen: true, indent: 2, maxlen: 80 */
-/*global window, rJS, RSVP, Papa, Boolean, Math, SimpleQuery, Query, JSON, UriTemplate */
-(function (window, rJS, RSVP, Papa, Boolean, Math, SimpleQuery, Query, JSON, UriTemplate) {
+/*global window, rJS, RSVP, Papa, Boolean, Math, SimpleQuery, Query, JSON, UriTemplate, Date */
+(function (window, rJS, RSVP, Papa, Boolean, Math, SimpleQuery, Query, JSON, UriTemplate, Date) {
   "use strict";
 
   // commune info fetched from opendatasoft
@@ -84,21 +84,21 @@
   // google forms for now
   var ILE_DE_FRANCE_REPORT_URL = "https://docs.google.com/forms/d/e/1FAIpQLSd" +
     "zIVWy4_YrgSjeia9WCZpdLR_Lv2CsDoLTc86pSJ0WPpyd9w/viewform?usp=pp_url&entr" +
-    "y.1765756450=%C3%8Ele-de-France&entry.1669943245={department}&entry.1849" +
-    "525071={commune}&entry.1261225401={contact_name}&entry.688373862={contac" +
-    "t_email}";
+    "y.180046422={contact_date}&entry.1765756450=%C3%8Ele-de-France&entry.166" +
+    "9943245={department}&entry.1849525071={commune}&entry.1261225401={contac" +
+    "t_name}&entry.688373862={contact_email}";
   var ILE_DE_FRANCE_TEMPLATE = UriTemplate.parse(ILE_DE_FRANCE_REPORT_URL);
   var HAUTS_DE_FRANCE_REPORT_URL = "https://docs.google.com/forms/d/e/1FAIpQL" +
     "Sd5YfcU0I82C8cKUgz6sDxUQ367wnonIRgYApGskfbzHP5guA/viewform?usp=pp_url&en" +
-    "try.1765756450=Hauts-de-France&entry.1669943245={department}&entry.18495" +
-    "25071={commune}&entry.1261225401={contact_name}&entry.688373862={contact" +
-    "_email}";
+    "try.1155661140={contact_date}&entry.1765756450=Hauts-de-France&entry.166" +
+    "9943245={department}&entry.1849525071={commune}&entry.1261225401={contac" +
+    "t_name}&entry.688373862={contact_email}";
   var HAUTS_DE_FRANCE_TEMPLATE = UriTemplate.parse(HAUTS_DE_FRANCE_REPORT_URL);
-  var AUVERGNE_RHONE_ALPES_REPORT_URL = "https://docs.google.com/forms/d/e/1FAIpQL" +
-    "ScXL24_UbK6E1BaFvJfT8RTOhRdALUNnHfyQU-O95GlIZdokg/viewform?usp=pp_url&en" +
-    "try.1765756450=Auvergne-Rh%C3%B4ne-Alpes&entry.1669943245={department}&e" +
-    "ntry.1849525071={commune}&entry.1261225401={contact_name}&entry.68837386" +
-    "2={contact_email}";
+  var AUVERGNE_RHONE_ALPES_REPORT_URL = "https://docs.google.com/forms/d/e/1F" +
+    "AIpQLScXL24_UbK6E1BaFvJfT8RTOhRdALUNnHfyQU-O95GlIZdokg/viewform?usp=pp_u" +
+    "rl&entry.845359847={contact_date}&entry.1765756450=Auvergne-Rh%C3%B4ne-A" +
+    "lpes&entry.1669943245={department}&entry.1849525071={commune}&entry.1261" +
+    "225401={contact_name}&entry.688373862={contact_email}";
   var AUVERGNE_RHONE_ALPES_TEMPLATE = UriTemplate.parse(AUVERGNE_RHONE_ALPES_REPORT_URL);
 
   // https://fr.wikipedia.org/wiki/R%C3%A9pertoire_national_des_%C3%A9lus
@@ -507,6 +507,14 @@
     return GOOGLE_URL + my_title.split(SPACE).join(PLUS) + SPACE + my_keyword;
   }
 
+  function getToday() {
+    var today = new Date();
+    var dd = String(today.getDate()).padStart(2, '0');
+    var mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
+    var yyyy = today.getFullYear();
+    return yyyy + MINUS + mm + MINUS + dd;
+  }
+
   function getReportUrl(my_record, my_commune, my_candidate) {
     var template;
     switch (my_commune.fields.nom_reg) {
@@ -527,7 +535,8 @@
       "department": my_record.parent_title,
       "commune": my_record.title,
       "contact_name": my_candidate ? my_candidate.nom : BLANK,
-      "contact_email": my_candidate ? BLANK : my_commune.fields.coordonneesnum_email
+      "contact_email": my_candidate ? BLANK : my_commune.fields.coordonneesnum_email,
+      "contact_date": getToday()
     });
   }
 
@@ -1716,4 +1725,4 @@
       }
     }, false, true);
 
-}(window, rJS, RSVP, Papa, Boolean, Math, SimpleQuery, Query, JSON, UriTemplate));
+}(window, rJS, RSVP, Papa, Boolean, Math, SimpleQuery, Query, JSON, UriTemplate, Date));
