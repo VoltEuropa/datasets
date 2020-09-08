@@ -100,7 +100,6 @@
     "2={contact_email}";
   var AUVERGNE_RHONE_ALPES_TEMPLATE = UriTemplate.parse(AUVERGNE_RHONE_ALPES_REPORT_URL);
 
-
   // https://fr.wikipedia.org/wiki/R%C3%A9pertoire_national_des_%C3%A9lus
   var NUANCE_DICT = {
     "EXG": "Extrême gauche",
