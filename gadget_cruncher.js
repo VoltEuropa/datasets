@@ -1,6 +1,6 @@
 /*jslint nomen: true, indent: 2, maxlen: 80 */
-/*global window, rJS, RSVP, Papa, Boolean, Math, SimpleQuery, Query, JSON */
-(function (window, rJS, RSVP, Papa, Boolean, Math, SimpleQuery, Query, JSON) {
+/*global window, rJS, RSVP, Papa, Boolean, Math, SimpleQuery, Query, JSON, UriTemplate */
+(function (window, rJS, RSVP, Papa, Boolean, Math, SimpleQuery, Query, JSON, UriTemplate) {
   "use strict";
 
   // commune info fetched from opendatasoft
@@ -57,6 +57,7 @@
   var REGION = "region";
   var DEPT = "dept";
   var MINUS = "-";
+  var PLUS = "+";
   var SPACE = " ";
   var GOOGLE_URL = "https://www.google.com/search?q=";
   var ODS_DATA_SET = "annuaire-de-ladministration-base-de-donnees-locales";
@@ -66,6 +67,8 @@
   var HASH = "#";
   var CANVAS = "canvas";
   var TEN_MINUTES = 600000;
+  var THOUSAND = "1000";
+  var RESET = "Reset";
   var BLANK = "";
   var SELECTED = "selected";
   var RECORDS = " dossiers";
@@ -76,6 +79,27 @@
   var LOCATION = window.location;
   var KLASS = rJS(window);
   var TEMPLATE_PARSER = /\{([^{}]*)\}/g;
+
+  // google forms for now
+  var ILE_DE_FRANCE_REPORT_URL = "https://docs.google.com/forms/d/e/1FAIpQLSd" +
+    "zIVWy4_YrgSjeia9WCZpdLR_Lv2CsDoLTc86pSJ0WPpyd9w/viewform?usp=pp_url&entr" +
+    "y.1765756450=%C3%8Ele-de-France&entry.1669943245={department}&entry.1849" +
+    "525071={commune}&entry.1261225401={contact_name}&entry.688373862={contac" +
+    "t_email}";
+  var ILE_DE_FRANCE_TEMPLATE = UriTemplate.parse(ILE_DE_FRANCE_REPORT_URL);
+  var HAUTS_DE_FRANCE_REPORT_URL = "https://docs.google.com/forms/d/e/1FAIpQL" +
+    "Sd5YfcU0I82C8cKUgz6sDxUQ367wnonIRgYApGskfbzHP5guA/viewform?usp=pp_url&en" +
+    "try.1765756450=Hauts-de-France&entry.1669943245={department}&entry.18495" +
+    "25071={commune}&entry.1261225401={contact_name}&entry.688373862={contact" +
+    "_email}";
+  var HAUTS_DE_FRANCE_TEMPLATE = UriTemplate.parse(HAUTS_DE_FRANCE_REPORT_URL);
+  var AUVERGNE_RHONE_ALPES_REPORT_URL = "https://docs.google.com/forms/d/e/1FAIpQL" +
+    "ScXL24_UbK6E1BaFvJfT8RTOhRdALUNnHfyQU-O95GlIZdokg/viewform?usp=pp_url&en" +
+    "try.1765756450=Auvergne-Rh%C3%B4ne-Alpes&entry.1669943245={department}&e" +
+    "ntry.1849525071={commune}&entry.1261225401={contact_name}&entry.68837386" +
+    "2={contact_email}";
+  var AUVERGNE_RHONE_ALPES_TEMPLATE = UriTemplate.parse(AUVERGNE_RHONE_ALPES_REPORT_URL);
+
 
   // https://fr.wikipedia.org/wiki/R%C3%A9pertoire_national_des_%C3%A9lus
   var NUANCE_DICT = {
@@ -480,7 +504,37 @@
   }
 
   function getGoogleSearchUrl(my_title, my_keyword) {
-    return GOOGLE_URL + my_title.split(SPACE).join("+") + SPACE + my_keyword;
+    return GOOGLE_URL + my_title.split(SPACE).join(PLUS) + SPACE + my_keyword;
+  }
+
+  function getReportUrl(my_record, my_commune, my_candidate) {
+    var template;
+    switch (my_commune.fields.nom_reg) {
+      case "HAUTS-DE-FRANCE":
+        template = HAUTS_DE_FRANCE_TEMPLATE;
+        break;
+      case "AUVERGNE-RHONE-ALPES":
+        template = AUVERGNE_RHONE_ALPES_TEMPLATE;
+        break;
+      case "ILE-DE-FRANCE":
+        template = ILE_DE_FRANCE_TEMPLATE;
+        break;
+    }
+    if (template === undefined) {
+      return BLANK;
+    }
+    return template.expand({
+      "department": my_record.parent_title,
+      "commune": my_record.title,
+      "contact_name": my_candidate ? my_candidate.nom : BLANK,
+      "contact_email": my_candidate ? BLANK : my_commune.fields.coordonneesnum_email
+    });
+  }
+
+  function clean(str) {
+    return str.split(SPACE).map(function (element) {
+      return encode(element);
+    }).join(PLUS);
   }
 
   function encode(str) {
@@ -781,9 +835,13 @@
       "filter_region": undefined,
       "filter_department": undefined,
       "filter_sort": undefined,
+      "filter_1000": undefined,
+      "filter_unhandled": undefined,
       "previous_record": undefined,
       "next_record": undefined,
-      "record_count": 0
+      "current_record": undefined,
+      "record_count": 0,
+      "reduced_set": undefined
     })
 
     /////////////////////////////
@@ -810,7 +868,11 @@
         sort_abc_btn: getElem(element, ".sort_abc_trigger"),
         previous_btn: getElem(element, ".list_previous_commune"),
         list_btn: getElem(element, ".list_communes"),
-        next_btn: getElem(element, ".list_next_commune")
+        next_btn: getElem(element, ".list_next_commune"),
+        show_1000: getElem(element, ".show_1000_trigger"),
+        show_all: getElem(element, ".show_all_trigger"),
+        show_unhandled: getElem(element, ".show_unhandled_trigger"),
+        show_total: getElem(element, ".show_total_trigger")
       };
     })
 
@@ -988,6 +1050,8 @@
           return gadget.setParameterFormList(id, state.filter_department);
         case DEPT:
           return gadget.setParameterFormList(state.filter_region, id);
+        case THOUSAND:
+        case RESET:
         case TITLE:
         case ID:
           return gadget.setParameterFormList(state.filter_region, state.filter_department, my_type);
@@ -1009,6 +1073,7 @@
       var department_list = [];
       var len = my_data.length;
       var reduced_set = [];
+      var item;
       var i;
   
       function getDepartmentIds(department_list) {
@@ -1034,8 +1099,9 @@
       }, []).filter(Boolean);
   
       for (i = 0; i < len; i += 1) {
-        if (department_list.includes(my_data[i].parent_id)) {
-          reduced_set.push(my_data[i]);
+        item = my_data[i];
+        if (department_list.includes(item.parent_id)) {
+          reduced_set.push(item);
         }
       }
       return reduced_set;
@@ -1048,7 +1114,23 @@
       var department_list = [];
       var data_list;
       var queue = new RSVP.Queue();
-      var sort_by = setSorting(gadget.state.filter_sort, my_key);
+      var sort_by;
+      
+      // include new filter options
+      if (my_key === THOUSAND) {
+        sort_by = setSorting(undefined, undefined);
+        queue.push(function () {
+          return gadget.stateChange({"filter_1000": true});
+        });
+      } else {
+        sort_by = setSorting(gadget.state.filter_sort, my_key);
+      }
+      
+      if(my_key === RESET) {
+        queue.push(function () {
+          return gadget.stateChange({"filter_1000": undefined, "filter_all": undefined});
+        });
+      }
 
       // if a region is specified, we must update departments
       if (my_region_id) {
@@ -1062,8 +1144,25 @@
             return gadget.filterDataSet(dict.data_set, data_list, my_region_id, my_dept_id);
           })
           .push(function (reduced_set) {
+            if (gadget.state.filter_1000) {
+              return reduced_set.map(function (record) {
+                var total = record.bureau_list.reduce(function (acc, val) {
+                  return acc + parseInt(val.inscrits, 10);
+                },0);
+                if (total > 1000) {
+                  return record;
+                }
+              }).filter(Boolean);
+            }
+            
+            return reduced_set;
+          })
+          .push(function (reduced_set) {
             setCommuneList(reduced_set, dict.commune_container);
-            return gadget.stateChange({"record_count": reduced_set.length});
+            return gadget.stateChange({
+              "record_count": reduced_set.length,
+              "reduced_set": reduced_set
+            });
           });
       }
 
@@ -1101,7 +1200,10 @@
           return gadget.stateChange({
             "filter_region": my_region_id,
             "filter_department": my_dept_id,
-            "filter_sort": sort_by
+            "filter_sort": sort_by,
+            "current_record": undefined,
+            "previous_record": undefined,
+            "next_record": undefined
           });
       });
     })
@@ -1174,21 +1276,24 @@
           return parsePapaPromise(file);
         })
         .push(function (result_dict) {
-          console.log(result_dict)
           if (my_download) {
             return gadget.downloadCSV(result_dict);
           }
           dict.data_set = churnThroughDataSet(result_dict.data);
           dict.load_btn.removeAttribute(DISABLED);
-          dict.load_btn_off.removeAttribute(DISABLED);
-          dict.download_btn.removeAttribute(DISABLED);
-          dict.download_churned_btn.removeAttribute("DISABLED");
+          //dict.load_btn_off.removeAttribute(DISABLED);
+          //dict.download_btn.removeAttribute(DISABLED);
+          //dict.download_churned_btn.removeAttribute("DISABLED");
           dict.region_btn.removeAttribute(DISABLED);
           dict.region_btn_off.removeAttribute(DISABLED);
           dict.dept_btn.removeAttribute(DISABLED);
           dict.dept_btn_off.removeAttribute(DISABLED);
-          dict.sort_id_btn.removeAttribute(DISABLED);
-          dict.sort_abc_btn.removeAttribute(DISABLED);
+          //dict.sort_id_btn.removeAttribute(DISABLED);
+          //dict.sort_abc_btn.removeAttribute(DISABLED);
+          dict.show_1000.removeAttribute(DISABLED);
+          dict.show_all.removeAttribute(DISABLED);
+          //dict.show_unhandled.removeAttribute(DISABLED);
+          //dict.show_total.removeAttribute(DISABLED);
           return RSVP.all([
             gadget.stateChange({"record_count": dict.data_set.length}),
             gadget.setParameterFormList()
@@ -1317,20 +1422,23 @@
     .declareMethod("setCommune", function (my_hash) {
       var gadget = this;
       var dict = gadget.property_dict;
+      var state = gadget.state;
       var title = decode(my_hash).slice(1);
-      var len = dict.data_set.length;
       var i;
-      var data = dict.data_set;
+      var data = state.reduced_set || dict.data_set;
+      var len = data.length;
       var record;
       var prev;
       var next;
 
       // find record
       for (i = 0; i < len; i += 1) {
-        if (dict.data_set[i].title === title) {
-          record = dict.data_set[i];
-          prev = dict.data_set[i - 1];
-          next = dict.data_set[i + 1];
+        if (data[i].title === title) {
+
+          // what do I do if there are more than one commune with exactly the same name?
+          record = data[i];
+          prev = data[i + 1];
+          next = data[i - 1];
           break;
         }
       }
@@ -1376,6 +1484,7 @@
             //"commune_wikipedia_url": BLANK,
             //"commune_facebook_url": BLANK,
             "google_search_url": getGoogleSearchUrl(record.title, COMMUNE),
+            "commune_report_url": getReportUrl(record, commune),
             "ods_nom": commune.fields.nom || BLANK,
             "ods_nom_reg": commune.fields.nom_reg || BLANK,
             "ods_nom_epci": commune.fields.nom_epci || BLANK,
@@ -1397,7 +1506,8 @@
                 "head_name": candidate.nom,
                 "nuance": candidate.libelle_nuance,
                 //"facebook_url": BLANK
-                "google_search_url": getGoogleSearchUrl(candidate.liste === BLANK ? candidate.nom : candidate.liste, record.title)
+                "google_search_url": getGoogleSearchUrl(candidate.liste === BLANK ? candidate.nom : candidate.liste, record.title),
+                "commune_report_url": getReportUrl(record, commune, candidate),
               });
             }).join(BLANK)
           });
@@ -1416,7 +1526,8 @@
     
           return gadget.stateChange({
             "previous_record": prev,
-            "next_record": next
+            "next_record": next,
+            "current_record": record
           });
         })
         .push(undefined, function (err) {
@@ -1461,6 +1572,9 @@
       if (delta.hasOwnProperty("filter_region")) {
         state.filter_region = delta.filter_region;
       }
+      if (delta.hasOwnProperty("filter_1000")) {
+        state.filter_1000 = delta.filter_1000;
+      }
       if (delta.hasOwnProperty("filter_department")) {
         state.filter_department = delta.filter_department;
       }
@@ -1473,8 +1587,14 @@
       if (delta.hasOwnProperty("next_record")) {
         state.next_record = delta.next_record;
       }
+      if (delta.hasOwnProperty("current_record")) {
+        state.current_record = delta.current_record;
+      }
       if (delta.hasOwnProperty("record_count")) {
         dict.record_status.textContent = delta.record_count + RECORDS;
+      }
+      if (delta.hasOwnProperty("reduced_set")) {
+        state.reduced_set = delta.reduced_set;
       }
       return RSVP.all(promise_list);
     })
@@ -1551,7 +1671,11 @@
         case "list_by_id":
           return this.updateParameterFormList(null, ID);
         case "show_previous_commune":
-          return this.updateHash(1);     
+          return this.updateHash(1);
+        case "show_1000":
+          return this.updateParameterFormList(null, THOUSAND);
+        case "show_all":
+          return this.updateParameterFormList(null, RESET);
         case "list_communes":
           return this.resetCommuneList();
         case "show_next_commune":
@@ -1559,4 +1683,4 @@
       }
     }, false, true);
 
-}(window, rJS, RSVP, Papa, Boolean, Math, SimpleQuery, Query, JSON));
+}(window, rJS, RSVP, Papa, Boolean, Math, SimpleQuery, Query, JSON, UriTemplate));

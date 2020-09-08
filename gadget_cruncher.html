@@ -52,9 +52,10 @@
       
       <h3>Contact:</h3>
       <ul>
-      <li>Site Web: {ods_coordonneesnum_url}</li>
-      <li>Email: {ods_coordonneesnum_email}</li>
-      <li>Chercher en-ligne: <a href="{google_search_url}" target="_blank">Google</a></li>
+      <li>Site Web : {ods_coordonneesnum_url}</li>
+      <li>Email : {ods_coordonneesnum_email}</li>
+      <li>Chercher en-ligne : <a href="{google_search_url}" target="_blank">Google</a></li>
+      <li>Pris de contact : <a href="{commune_report_url}" target="_blank">Rapport</a></li>
       </ul>
     </script>
 
@@ -67,7 +68,7 @@
 
     <!-- commune candidate list item -->
     <script id="commune_candidate_list_item" type="text/x-supplant">
-      <li>{global_percentage}% ({global_votes} votes) {liste_name} / {nuance} (tête: {head_name}) - <a target="_blank" href="{google_search_url}">Google</a></li>
+      <li>{global_percentage}% ({global_votes} votes) {liste_name} / {nuance} (tête: {head_name}) - <a target="_blank" href="{google_search_url}">Google</a> - <a href="{commune_report_url}" target="_blank">Rapport</a></li>
     </script>
 
     <!-- results -->
@@ -132,79 +133,103 @@
 
   </head>
   <body>
-    <div class="nav_element">
-      <span class="load_data_status">dossiers actifs:</span>
-      <span class="load_data_records"></span>
-    </div>
+    <!-- social media login to search Facebook-->
     <!--div class="nav_element">
       <form name="connect_facebook" id="connect_facebook">
         <button type="submit" class="connect_facebook_trigger">Connecter avec facebook</button>
       </form>  
     </div-->
-    <div class="nav_element">
-      <form name="get_data" id="get_data">
-        <input type="file" name="get_dataset" id="get_dataset" />
-        <button type="submit" class="get_dataset_trigger">Charger les données</button>
-      </form>
-      <form name="remove_data">
-        <button type="submit" disabled="disabled" class="remove_dataset_trigger">Supprimer</button>
-      </form>
+
+    <!-- load data -->
+    <div class="loading-wrapper"></div>
+      <div class="nav-element">
+        <form name="get_data" id="get_data">
+          <input type="file" name="get_dataset" id="get_dataset" />
+          <button type="submit" class="get_dataset_trigger">Charger les données</button>
+        </form>
+        <!--form name="remove_data">
+          <button type="submit" disabled="disabled" class="remove_dataset_trigger">Supprimer</button>
+        </form-->
+      </div>
+      <!--div class="nav_element">
+        <form name="download_churned_selection" id="download_churned_selection">
+          <button type="submit" disabled="disabled" class="download_churned_selection_trigger">Télécharger la sélection nettoyée</button>
+        </form>
+      </div>
+      <div class="nav_element">
+        <form name="download_current_selection" id="download_current_selection">
+          <button type="submit" disabled="disabled" class="download_current_selection_trigger">Télécharger la sélection actuelle</button>
+        </form>
+      </div-->
+      <div class="nav-element filter-wrapper">
+        <form class="filter-element" name="set_region_filter" id="set_region_filter">
+          <label for="select_region">Région</label>
+          <select name="select_region" id="select_region"></select>
+          <button type="submit" disabled="disabled" class="add_region_trigger">Sélectionner cette région</button>
+        </form>
+        <form class="filter-element" name="remove_region_filter">
+          <button type="submit" disabled="disabled" class="delete_region_trigger"><span class="material-icons">delete_forever</span></button>
+        </form>
+      </div>
+      <div class="nav-element filter-wrapper">
+        <form class="filter-element" name="set_department_filter" id="set_department_filter">
+          <label for="select_department">Département</label>
+          <select name="select_department" id="select_department"></select>
+          <button type="submit" disabled="disabled" class="add_dept_trigger">Sélectionner ce département</button>
+        </form>
+        <form class="filter-element" name="remove_department_filter">
+          <button type="submit" disabled="disabled" class="delete_dept_trigger"><span class="material-icons">delete_forever</span></button>
+        </form>
+      </div>
     </div>
-    <div class="nav_element">
-      <form name="download_churned_selection" id="download_churned_selection">
-        <button type="submit" disabled="disabled" class="download_churned_selection_trigger">Télécharger la sélection nettoyée</button>
-      </form>
-    </div>
-    <div class="nav_element">
-      <form name="download_current_selection" id="download_current_selection">
-        <button type="submit" disabled="disabled" class="download_current_selection_trigger">Télécharger la sélection actuelle</button>
-      </form>
-    </div>
-    <div class="nav_element">
-      <form name="set_region_filter" id="set_region_filter">
-        <label for="select_region">Région</label>
-        <select name="select_region" id="select_region">
-          
-        </select>
-        <button type="submit" disabled="disabled" class="add_region_trigger">Sélectionner cette région</button>
-      </form>
-      <form name="remove_region_filter">
-        <button type="submit" disabled="disabled" class="delete_region_trigger">Supprimer le filtre de la région</button>
-      </form>
-    </div>
-    <div class="nav_element">
-      <form name="set_department_filter" id="set_department_filter">
-        <label for="select_department">Département</label>
-        <select name="select_department" id="select_department">
-          
-        </select>
-        <button type="submit" disabled="disabled" class="add_dept_trigger">Sélectionner ce département</button>
-      </form>
-      <form name="remove_department_filter">
-        <button type="submit" disabled="disabled" class="delete_dept_trigger">Supprimer le filtre du departement</button>
-      </form>
-    </div>
-    <div class="nav_element">
-      <form name="list_by_id" id="list_by_id">
-        <button type="submit" disabled="disabled" class="sort_id_trigger">Trier par id</button>
-      </form>
-    </div>
-    <div class="nav_element">
-      <form name="list_by_name" id="list_by_name">
-        <button type="submit" disabled="disabled" class="sort_abc_trigger">Trier par libelle</button>
-      </form>
+    <div class="filter-wrapper"
+      <!-- Filters -->
+      <!--div class="nav-element">
+        <form class="filter-element" name="list_by_id" id="list_by_id">
+          <button type="submit" disabled="disabled" class="sort_id_trigger">Trier par id</button>
+        </form>
+        <form class="filter-element" name="list_by_name" id="list_by_name">
+          <button type="submit" disabled="disabled" class="sort_abc_trigger">Trier par libelle</button>
+        </form>
+      </div-->
+      <div class="nav-element">
+        <form class="filter-element" name="show_1000">
+          <label for="show_1000_submit">Inscrits</label>
+          <button id="show_1000_submit" class="show_1000_trigger" disabled="disabled" name="show_1000_submit" type="submit">&gt;&nbsp;1000</button>
+        </form>
+        <form class="filter-element" name="show_all">
+          <button disabled="disabled" class="show_all_trigger" name="show_all_submit" type="submit">Tout afficher</button>
+        </form>
+      </div>
+      <!--div class="nav-element">
+        <form class="filter-element" name="show_unhandled">
+          <label for="show_unhandled">Montrer</label>
+          <button id="show_unhandled" class="show_unhandled_trigger" disabled="disabled" name="show_unhandled" type="submit">Pas contacté</button>
+        </form>
+        <form class="filter-element" name="show_total">
+          <button disabled="disabled" class="show_total_trigger" name="show_all_submit" type="submit">Tout afficher</button>
+        </form>
+      </div-->
     </div>
     <hr/>
-    <div class="nav_element">
-      <form name="show_previous_commune" id="display_previous_commune">
-        <button type="submit" disabled="disabled" class="list_previous_commune">Commune précédente</button>
-      </form>
-      <form name="list_communes" id="list_communes">
-        <button type="submit" disabled="disabled" class="list_communes">Retour à la liste</button>
-      </form>
-      <form name="show_next_commune" id="display_next_commune">
-        <button type="submit" disabled="disabled" class="list_next_commune">Commune suivante</button>
-      </form>
+    <div class="pagination-wrapper">
+      <div class="nav-element">
+        <div class="pagination-element">
+          <span class="load_data_status">Dossiers actifs:</span>
+          <span class="load_data_records"></span>
+        </div>
+      </div>
+      <div class="nav-element">
+        <form class="pagination-element" name="show_previous_commune" id="display_previous_commune">
+          <button type="submit" disabled="disabled" class="list_previous_commune">Commune précédente</button>
+        </form>
+        <form class="pagination-element" name="list_communes" id="list_communes">
+          <button type="submit" disabled="disabled" class="list_communes">Retour à la liste</button>
+        </form>
+        <form class="pagination-element" name="show_next_commune" id="display_next_commune">
+          <button type="submit" disabled="disabled" class="list_next_commune">Commune suivante</button>
+        </form>
+      </div>
     </div>
 
     <div class="commune_list_container"></div>
