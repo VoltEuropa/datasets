@@ -54,7 +54,7 @@
       <ul>
       <li>Site Web : {ods_coordonneesnum_url}</li>
       <li>Email : {ods_coordonneesnum_email}</li>
-      <li>Chercher en-ligne : <a href="{google_search_url}" target="_blank">Google</a></li>
+      <li>Chercher en-ligne : <a href="{google_search_url}" target="_blank">Google</a> / <a target="_blank" href="{facebook_search_url}">Facebook</a></li>
       <li>Pris de contact : <a href="{commune_report_url}" target="_blank">Rapport</a></li>
       </ul>
     </script>
@@ -68,7 +68,11 @@
 
     <!-- commune candidate list item -->
     <script id="commune_candidate_list_item" type="text/x-supplant">
-      <li>{global_percentage}% ({global_votes} votes) {liste_name} / {nuance} (tête: {head_name}) - <a target="_blank" href="{google_search_url}">Google</a> - <a href="{commune_report_url}" target="_blank">Rapport</a></li>
+      <li>{global_percentage}% ({global_votes} votes) {liste_name} / {nuance} (tête: {head_name}) - 
+        <a href="{google_search_url}" target="_blank" >Google</a> - 
+        <a href="{facebook_search_url}" target="_blank">Facebook</a> - 
+        <a href="{commune_report_url}" target="_blank">Rapport</a>
+      </li>
     </script>
 
     <!-- results -->
