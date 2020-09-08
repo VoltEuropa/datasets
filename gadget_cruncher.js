@@ -68,6 +68,7 @@
   var CANVAS = "canvas";
   var TEN_MINUTES = 600000;
   var THOUSAND = "1000";
+  var NINERS = "999";
   var RESET = "Reset";
   var BLANK = "";
   var SELECTED = "selected";
@@ -458,7 +459,7 @@
   }
 
   function getNuance(my_key, rec) {
-    // debug
+    // debug raw file
     //if (!my_key) {
     //  console.log("no key", rec);
     //}
@@ -835,6 +836,7 @@
       "filter_department": undefined,
       "filter_sort": undefined,
       "filter_1000": undefined,
+      "filter_999": undefined,
       "filter_unhandled": undefined,
       "previous_record": undefined,
       "next_record": undefined,
@@ -871,7 +873,8 @@
         show_1000: getElem(element, ".show_1000_trigger"),
         show_all: getElem(element, ".show_all_trigger"),
         show_unhandled: getElem(element, ".show_unhandled_trigger"),
-        show_total: getElem(element, ".show_total_trigger")
+        show_total: getElem(element, ".show_total_trigger"),
+        show_999: getElem(element, ".show_999_trigger")
       };
     })
 
@@ -1050,6 +1053,7 @@
         case DEPT:
           return gadget.setParameterFormList(state.filter_region, id);
         case THOUSAND:
+        case NINERS:
         case RESET:
         case TITLE:
         case ID:
@@ -1074,7 +1078,7 @@
       var reduced_set = [];
       var item;
       var i;
-  
+
       function getDepartmentIds(department_list) {
         return department_list.map(function (department) {
           if (my_dept_id) {
@@ -1096,7 +1100,7 @@
         }
         return acc.concat(getDepartmentIds(region.department_list));
       }, []).filter(Boolean);
-  
+
       for (i = 0; i < len; i += 1) {
         item = my_data[i];
         if (department_list.includes(item.parent_id)) {
@@ -1114,20 +1118,35 @@
       var data_list;
       var queue = new RSVP.Queue();
       var sort_by;
-      
+
+      // non-glory code start!
+
       // include new filter options
-      if (my_key === THOUSAND) {
-        sort_by = setSorting(undefined, undefined);
-        queue.push(function () {
-          return gadget.stateChange({"filter_1000": true});
-        });
-      } else {
-        sort_by = setSorting(gadget.state.filter_sort, my_key);
+      switch (my_key) {
+        case THOUSAND:
+          sort_by = setSorting(undefined, undefined);
+          queue.push(function () {
+            return gadget.stateChange({"filter_1000": my_key});
+          });
+          break;
+        case NINERS:
+          sort_by = setSorting(undefined, undefined);
+          queue.push(function () {
+            return gadget.stateChange({"filter_999": my_key});
+          });
+          break;
+        default:
+          sort_by = setSorting(gadget.state.filter_sort, my_key);
+          break;
       }
-      
-      if(my_key === RESET) {
+
+      if(my_key === RESET || my_key === undefined) {
         queue.push(function () {
-          return gadget.stateChange({"filter_1000": undefined, "filter_all": undefined});
+          return gadget.stateChange({
+            "filter_1000": undefined, 
+            "filter_all": undefined,
+            "filter_999": undefined
+          });
         });
       }
 
@@ -1143,7 +1162,7 @@
             return gadget.filterDataSet(dict.data_set, data_list, my_region_id, my_dept_id);
           })
           .push(function (reduced_set) {
-            if (gadget.state.filter_1000) {
+            if (gadget.state.filter_1000 !== undefined) {
               return reduced_set.map(function (record) {
                 var total = record.bureau_list.reduce(function (acc, val) {
                   return acc + parseInt(val.inscrits, 10);
@@ -1153,7 +1172,16 @@
                 }
               }).filter(Boolean);
             }
-            
+            if (gadget.state.filter_999 !== undefined) {
+              return reduced_set.map(function (record) {
+                var total = record.bureau_list.reduce(function (acc, val) {
+                  return acc + parseInt(val.inscrits, 10);
+                },0);
+                if (total < 1000) {
+                  return record;
+                }
+              }).filter(Boolean);
+            }
             return reduced_set;
           })
           .push(function (reduced_set) {
@@ -1290,6 +1318,7 @@
           //dict.sort_id_btn.removeAttribute(DISABLED);
           //dict.sort_abc_btn.removeAttribute(DISABLED);
           dict.show_1000.removeAttribute(DISABLED);
+          dict.show_999.removeAttribute(DISABLED);
           dict.show_all.removeAttribute(DISABLED);
           //dict.show_unhandled.removeAttribute(DISABLED);
           //dict.show_total.removeAttribute(DISABLED);
@@ -1574,6 +1603,9 @@
       if (delta.hasOwnProperty("filter_1000")) {
         state.filter_1000 = delta.filter_1000;
       }
+      if (delta.hasOwnProperty("filter_999")) {
+        state.filter_999 = delta.filter_999;
+      }
       if (delta.hasOwnProperty("filter_department")) {
         state.filter_department = delta.filter_department;
       }
@@ -1673,6 +1705,8 @@
           return this.updateHash(1);
         case "show_1000":
           return this.updateParameterFormList(null, THOUSAND);
+        case "show_999":
+          return this.updateParameterFormList(null, NINERS)
         case "show_all":
           return this.updateParameterFormList(null, RESET);
         case "list_communes":
