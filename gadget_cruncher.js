@@ -45,6 +45,7 @@
   /////////////////////////////
   // parameters
   /////////////////////////////
+  var FB = "facebook";
   var NAME = "name";
   var DISABLED = "disabled";
   var CRUNCHER = "cruncher_jio";
@@ -503,8 +504,9 @@
     }).filter(Boolean);
   }
 
-  function getGoogleSearchUrl(my_title, my_keyword) {
-    return GOOGLE_URL + my_title.split(SPACE).join(PLUS) + SPACE + my_keyword;
+  function getGoogleSearchUrl(my_title, my_keyword, my_facebook) {
+    return GOOGLE_URL + (my_facebook ? (my_facebook + PLUS) : BLANK) +
+      my_title.split(SPACE).join(PLUS) + PLUS + (my_facebook ? BLANK : my_keyword);
   }
 
   function getToday() {
@@ -1520,6 +1522,7 @@
             "commune_inscrits": getTotalFromRecord("inscrits", record, null),
             //"commune_wikipedia_url": BLANK,
             //"commune_facebook_url": BLANK,
+            "facebook_search_url": getGoogleSearchUrl(record.title, COMMUNE, FB),
             "google_search_url": getGoogleSearchUrl(record.title, COMMUNE),
             "commune_report_url": getReportUrl(record, commune),
             "ods_nom": commune.fields.nom || BLANK,
@@ -1542,7 +1545,7 @@
                 "liste_name": candidate.liste,
                 "head_name": candidate.nom,
                 "nuance": candidate.libelle_nuance,
-                //"facebook_url": BLANK
+                "facebook_search_url": getGoogleSearchUrl(candidate.liste === BLANK ? candidate.nom : candidate.liste, record.title, FB),
                 "google_search_url": getGoogleSearchUrl(candidate.liste === BLANK ? candidate.nom : candidate.liste, record.title),
                 "commune_report_url": getReportUrl(record, commune, candidate),
               });
